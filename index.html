@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BarkID — Every Street Dog Has a Story</title>
+<meta name="theme-color" content="#1a1008">
+<meta name="description" content="Scan a QR tag to instantly see a dog's medical history, vaccination status, and connect with their caretaker.">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="showView('home')">
+    <span class="paw">🐾</span> BarkID
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('home')" id="tab-home">Home</button>
+    <button class="nav-tab" onclick="showView('caretaker')" id="tab-caretaker">Caretaker</button>
+    <button class="nav-tab" onclick="showView('register')" id="tab-register">Register Dog</button>
+  </div>
+  <div id="sync-pill" class="sync-pill">Online</div>
+</nav>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- VIEW: HOME                               -->
+<!-- ══════════════════════════════════════════ -->
+<div class="view active" id="view-home">
+  <div class="hero">
+    <div class="hero-eyebrow">Open Source · Decentralized · Offline-First</div>
+    <h1>Every Street Dog<br>Has a <span>Story</span></h1>
+    <p>Scan a QR tag to instantly see a dog's medical history, vaccination status, and connect with their caretaker — no app download needed.</p>
+    <div class="hero-actions">
+      <button class="btn btn-amber" onclick="openScanModal()">📷 Scan QR Code</button>
+      <button class="btn btn-outline" onclick="showView('caretaker')">I'm a Caretaker →</button>
+    </div>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-item"><div class="stat-num" id="stat-dogs">—</div><div class="stat-label">Dogs Registered</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-vaccinated">—</div><div class="stat-label">Vaccinated</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-missing">—</div><div class="stat-label">Missing</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-sterilized">—</div><div class="stat-label">Sterilized</div></div>
+  </div>
+
+  <div class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <h2 class="section-title" style="margin:0;">Registered Dogs <span>Nearby</span></h2>
+      <div class="search-box" style="margin:0;flex:1;max-width:280px;">
+        <input type="text" id="dog-search" placeholder="Search by name or ID…" oninput="filterDogs()">
+        <button class="btn btn-amber btn-sm" onclick="filterDogs()">Search</button>
+      </div>
+    </div>
+    <div id="dog-grid" class="dog-grid">
+      <div class="loading-state" style="grid-column:1/-1;"><div class="spinner"></div><p>Loading dogs…</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- VIEW: DOG PROFILE                        -->
+<!-- ══════════════════════════════════════════ -->
+<div class="view" id="view-profile">
+  <div class="profile-hero">
+    <button class="profile-back" onclick="showView('home')">← Back</button>
+    <div class="profile-avatar" id="profile-avatar">🐕</div>
+    <div class="profile-name" id="profile-name">—</div>
+    <div class="profile-id" id="profile-id">—</div>
+    <div class="profile-status-bar" id="profile-status-bar"></div>
+    <div style="height:24px;"></div>
+  </div>
+  <div class="profile-tabs-container">
+    <button class="profile-tab active" onclick="switchProfileTab('story',this)">Story</button>
+    <button class="profile-tab" onclick="switchProfileTab('health',this)">Health</button>
+    <button class="profile-tab" onclick="switchProfileTab('activity',this)">Activity</button>
+    <button class="profile-tab" onclick="switchProfileTab('qr',this)">QR Tag</button>
+  </div>
+  <div class="profile-content">
+
+    <!-- LOADING STATE FOR PROFILE -->
+    <div id="profile-loading" class="loading-state"><div class="spinner"></div><p>Loading profile…</p></div>
+
+    <!-- STORY TAB -->
+    <div id="ptab-story" style="display:none;">
+      <div id="missing-alert-box" style="display:none;" class="missing-alert">
+        <div class="missing-icon">🚨</div>
+        <div class="missing-text">
+          <h4>This dog is reported MISSING</h4>
+          <p id="missing-alert-text">Caretaker has been notified of your scan location.</p>
+        </div>
+      </div>
+      <div class="heartbeat-warn" id="heartbeat-warn">
+        ⏳ This dog hasn't been scanned in over 6 months. Status may be outdated.
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <p style="font-size:1rem;line-height:1.65;color:#3a2e22;font-style:italic;" id="profile-story">—</p>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:0.82rem;color:var(--muted);">📍 <span id="profile-location">—</span></div>
+          <div style="font-size:0.82rem;color:var(--muted);">👤 Caretaker: <span id="profile-caretaker">—</span></div>
+        </div>
+      </div>
+
+      <!-- Quick interaction log -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><div class="card-title">📋 Log an Interaction</div></div>
+        <div class="card-body" style="padding:14px;">
+          <div class="actions-grid">
+            <button class="action-btn primary" onclick="logInteraction('Sighted')">
+              <span class="icon">👀</span> I just saw this dog
+            </button>
+            <button class="action-btn secondary" onclick="logInteraction('Fed')">
+              <span class="icon">🍖</span> I fed this dog
+            </button>
+            <button class="action-btn secondary" onclick="logInteraction('Injured')">
+              <span class="icon">🩹</span> Looks injured
+            </button>
+            <button class="action-btn secondary" onclick="logInteraction('Friendly')">
+              <span class="icon">❤️</span> Very friendly
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="donate-card">
+        <h3>🍖 Support <span id="donate-name">this dog</span></h3>
+        <p style="font-size:0.85rem;color:var(--muted);">100% goes toward food, vaccines, and vet care</p>
+        <div class="donate-amounts">
+          <button class="donate-btn" onclick="selectDonate(10,this)">₹10 — Meal</button>
+          <button class="donate-btn" onclick="selectDonate(50,this)">₹50 — Week's Food</button>
+          <button class="donate-btn" onclick="selectDonate(200,this)">₹200 — Vaccine</button>
+        </div>
+        <button class="btn btn-amber btn-full" style="margin-top:14px;" onclick="handleDonate()">Donate Now 💛</button>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-danger btn-full" onclick="reportMissing()">🚨 I can't find this dog — Report Missing</button>
+      </div>
+    </div>
+
+    <!-- HEALTH TAB -->
+    <div id="ptab-health" style="display:none;">
+      <div class="card" style="margin-bottom:16px;">
+        <h4 style="font-family:'Syne',sans-serif;margin-bottom:14px;">Basic Info</h4>
+        <table class="info-table" id="profile-basic-table"></table>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <h4 style="font-family:'Syne',sans-serif;margin-bottom:14px;">Vaccination Records</h4>
+        <div id="profile-vax-grid" class="vax-grid"></div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <h4 style="font-family:'Syne',sans-serif;margin-bottom:14px;">Medical Treatments</h4>
+        <div class="record-list" id="treatments-list">
+          <div class="empty-state" style="padding:16px;">No treatment records found.</div>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="font-family:'Syne',sans-serif;margin-bottom:14px;">Caretakers</h4>
+        <div class="record-list" id="caretakers-list">
+          <div class="empty-state" style="padding:16px;">No caretakers linked.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY TAB -->
+    <div id="ptab-activity" style="display:none;">
+      <div class="card" style="margin-bottom:16px;">
+        <h4 style="font-family:'Syne',sans-serif;margin-bottom:14px;">Liveness Score</h4>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">Last activity: <span id="profile-last-scan">—</span></p>
+        <div class="liveness-bar"><div class="liveness-fill" id="liveness-fill" style="width:0%;background:var(--sage);"></div></div>
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:6px;" id="liveness-label">—</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📡 Scan History</div>
+          <span style="font-size:0.75rem;color:var(--muted);" id="activity-count"></span>
+        </div>
+        <div id="activity-feed"><div class="empty-state">No activity recorded yet.</div></div>
+      </div>
+    </div>
+
+    <!-- QR TAB -->
+    <div id="ptab-qr" style="display:none;">
+      <div style="text-align:center;padding:16px 0;">
+        <div class="qr-wrapper">
+          <div id="profile-qr-display"></div>
+          <div class="qr-label" id="profile-qr-name">—</div>
+          <div class="qr-id" id="profile-qr-id">—</div>
+          <span class="qr-mode-badge" id="profile-qr-mode-badge">—</span>
+        </div>
+        <div style="margin-top:20px;">
+          <button class="btn btn-bark" onclick="downloadQR()">⬇ Download QR Tag</button>
+        </div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:12px;">Print on TPU/plastic, attach to collar.<br>Error Correction: Level H (30% damage tolerance)</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- VIEW: CARETAKER DASHBOARD                -->
+<!-- ══════════════════════════════════════════ -->
+<div class="view" id="view-caretaker">
+  <div style="background:var(--bark);padding:40px 28px 30px;">
+    <div style="max-width:900px;margin:0 auto;">
+      <div style="font-family:'Syne',sans-serif;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--amber);margin-bottom:8px;">Caretaker Portal</div>
+      <h1 style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;color:#fff;margin-bottom:8px;">Your Pack 🐾</h1>
+      <p style="color:rgba(255,255,255,0.55);font-size:0.9rem;">Manage dog profiles, generate QR tags, and track updates.</p>
+    </div>
+  </div>
+  <div class="section">
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+      <button class="btn btn-amber" onclick="showView('register')">+ Register New Dog</button>
+      <button class="btn btn-ghost" onclick="exportCSV()">📊 Export CSV</button>
+      <button class="btn btn-ghost" onclick="openInventoryModal()">📦 Inventory Mode</button>
+    </div>
+    <div id="caretaker-dog-grid" class="dog-grid">
+      <div class="loading-state" style="grid-column:1/-1;"><div class="spinner"></div><p>Loading…</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- VIEW: REGISTER DOG                       -->
+<!-- ══════════════════════════════════════════ -->
+<div class="view" id="view-register">
+  <div style="background:var(--bark);padding:40px 28px 30px;">
+    <div style="max-width:700px;margin:0 auto;">
+      <div style="font-family:'Syne',sans-serif;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--amber);margin-bottom:8px;">New Registration</div>
+      <h1 style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;color:#fff;">Register a Dog</h1>
+    </div>
+  </div>
+
+  <div class="section" style="max-width:700px;">
+    <div class="card">
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:20px;">🐕 Basic Identity</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dog's Name *</label>
+          <input type="text" id="reg-name" placeholder="e.g. Bruno, Kali, Tommy">
+        </div>
+        <div class="form-group">
+          <label>Species</label>
+          <input type="text" id="reg-species" value="Dog" placeholder="Dog, Cat, etc.">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sex</label>
+          <select id="reg-sex">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Unknown">Unknown</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estimated Age Group</label>
+          <select id="reg-age">
+            <option value="Puppy (0-1yr)">Puppy (0-1yr)</option>
+            <option value="Young (1-3yr)">Young (1-3yr)</option>
+            <option value="Adult (3-7yr)">Adult (3-7yr)</option>
+            <option value="Senior (7yr+)">Senior (7yr+)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Status</label>
+          <select id="reg-status">
+            <option value="Street">Street Dog</option>
+            <option value="Owned">Owned / Pet</option>
+            <option value="Missing">Missing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Photo URL (optional)</label>
+          <input type="url" id="reg-photo" placeholder="https://…/dog.jpg">
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:20px;">💉 Health & Vaccinations</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sterilization Status</label>
+          <select id="reg-sterilized">
+            <option value="Yes">Yes — Sterilized</option>
+            <option value="No">No</option>
+            <option value="Unknown">Unknown</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Vaccination Bitmask</label>
+          <input type="number" id="reg-vax-mask" value="0" min="0" max="15" placeholder="0–15">
+        </div>
+      </div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Vaccination bitmask: bit 0 = Rabies, bit 1 = DHPP, bit 2 = Leptospirosis, bit 3 = Bordetella (e.g. 3 = Rabies + DHPP)</p>
+      <div class="checkbox-group" id="vax-checkboxes">
+        <label class="checkbox-item"><input type="checkbox" class="vax-cb" data-bit="0"> Rabies (bit 0)</label>
+        <label class="checkbox-item"><input type="checkbox" class="vax-cb" data-bit="1"> DHPP (bit 1)</label>
+        <label class="checkbox-item"><input type="checkbox" class="vax-cb" data-bit="2"> Leptospirosis (bit 2)</label>
+        <label class="checkbox-item"><input type="checkbox" class="vax-cb" data-bit="3"> Bordetella (bit 3)</label>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:20px;">👤 Caretaker Info</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="reg-caretaker-name" placeholder="Name or alias">
+        </div>
+        <div class="form-group">
+          <label>Contact (optional)</label>
+          <input type="text" id="reg-caretaker-contact" placeholder="Phone or email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="reg-caretaker-role">
+          <option value="Primary Caretaker">Primary Caretaker</option>
+          <option value="Community Volunteer">Community Volunteer</option>
+          <option value="NGO">NGO</option>
+          <option value="Vet">Vet</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:16px;">📲 QR Code Type</h3>
+      <div class="qr-toggle">
+        <button class="qr-toggle-btn active" id="qr-mode-static" onclick="setQRMode('static')">🔌 Static (Offline)</button>
+        <button class="qr-toggle-btn" id="qr-mode-dynamic" onclick="setQRMode('dynamic')">🌐 Dynamic (Online)</button>
+      </div>
+      <div id="qr-mode-desc-static" style="font-size:0.85rem;color:var(--muted);line-height:1.5;">
+        <strong>Static QR</strong> encodes all data directly into the QR code. Works offline. Must reprint if data changes.
+      </div>
+      <div id="qr-mode-desc-dynamic" style="font-size:0.85rem;color:var(--muted);line-height:1.5;display:none;">
+        <strong>Dynamic QR</strong> links to the dog's live profile URL. Real-time updates, location tracking. Requires internet to scan.
+      </div>
+    </div>
+
+    <div style="margin-top:24px;display:flex;gap:12px;">
+      <button class="btn btn-amber" id="reg-submit-btn" style="flex:1;justify-content:center;font-size:1rem;padding:14px;" onclick="registerDog()">
+        Generate QR & Register 🐾
+      </button>
+      <button class="btn btn-ghost" onclick="showView('home')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- MODALS                                   -->
+<!-- ══════════════════════════════════════════ -->
+
+<!-- SCAN MODAL -->
+<div class="modal-overlay" id="scan-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📷 Scan or Search</div>
+      <button class="modal-close" onclick="closeModal('scan-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Enter a Dog ID to look up a dog's profile from the backend.</p>
+      <div class="form-group">
+        <label>Dog ID</label>
+        <input type="text" id="scan-input" placeholder="e.g. dog_abc123" onkeydown="if(event.key==='Enter')scanDog()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('scan-modal')">Cancel</button>
+      <button class="btn btn-amber" onclick="scanDog()">View Dog Profile →</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR GENERATED MODAL -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✅ Dog Registered!</div>
+      <button class="modal-close" onclick="closeModal('qr-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div class="qr-wrapper" style="margin:0 auto 20px;">
+        <div id="modal-qr-display"></div>
+        <div class="qr-label" id="modal-qr-name">—</div>
+        <div class="qr-id" id="modal-qr-id">—</div>
+        <span class="qr-mode-badge" id="modal-qr-mode">—</span>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Print this QR and attach to the dog's collar.</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-bark" onclick="downloadQRFromModal()">⬇ Download QR</button>
+        <button class="btn btn-ghost" onclick="viewNewDog()">View Profile →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INVENTORY MODAL -->
+<div class="modal-overlay" id="inventory-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📦 Inventory Mode — Blank Tags</div>
+      <button class="modal-close" onclick="closeModal('inventory-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">Pre-generate blank QR tags to print and assign to dogs in the field.</p>
+      <div class="form-group">
+        <label>Number of Tags</label>
+        <input type="number" id="inventory-count" value="10" min="1" max="50">
+      </div>
+      <button class="btn btn-amber btn-full" onclick="generateInventory()" style="margin-bottom:16px;">Generate Tags</button>
+      <div id="inventory-output" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="scripts.js"></script>
+
+</body>
+</html>
