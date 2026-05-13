@@ -743,7 +743,7 @@ function buildQRContent(dog) {
     };
     return 'BARKID:' + btoa(JSON.stringify(payload));
   } else {
-    return `${PUBLIC_BASE_URL}/index.html?id=${dog.id}`;
+    return `${PUBLIC_BASE_URL}/community-canine-id/?id=${dog.id}&name=${dog.name}&photo_url=${dog.photo_url}&sex=${dog.sex}&species=${dog.species}&age_group=${dog.age_group}&sterilization_status=${dog.sterilization_status}&vaccination_bit_mask=${dog.vaccination_bit_mask}&status=${dog.status}&is_missing=${dog.is_missing}`;
   }
 }
 
