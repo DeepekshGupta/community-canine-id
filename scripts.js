@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════
 // CONFIG — change API_BASE to point at your server
 // ════════════════════════════════════════════════
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://ccid-backend.vercel.app';
 const OFFLINE_QUEUE_KEY = 'barkid_offline_queue';
 const PUBLIC_BASE_URL = window.location.origin; // used for dynamic QR links
 
