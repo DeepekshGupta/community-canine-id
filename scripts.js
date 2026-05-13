@@ -106,7 +106,7 @@ function updateStats(dogs) {
   document.getElementById('stat-dogs').textContent       = dogs.length;
   document.getElementById('stat-vaccinated').textContent = dogs.filter(d => d.vaccination_bit_mask & 1).length; // bit 0 = rabies
   document.getElementById('stat-missing').textContent    = dogs.filter(d => d.is_missing).length;
-  document.getElementById('stat-sterilized').textContent = dogs.filter(d => (d.sterilization_status || '').toLowerCase() === 'yes').length;
+  document.getElementById('stat-sterilized').textContent = dogs.filter(d => String(d.sterilization_status || '').toLowerCase() === 'yes').length;
 }
 
 // ════════════════════════════════════════════════
@@ -137,7 +137,7 @@ function renderDogGrid(dogs) {
 
 function dogCardHTML(d, isCaretaker) {
   const vaxOk = !!(d.vaccination_bit_mask & 1); // rabies bit
-  const sterilized = (d.sterilization_status || '').toLowerCase() === 'yes';
+  const sterilized = String(d.sterilization_status || '').toLowerCase() === 'yes';
   const imgHtml = d.photo_url
     ? `<img src="${d.photo_url}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;">`
     : '🐕';
